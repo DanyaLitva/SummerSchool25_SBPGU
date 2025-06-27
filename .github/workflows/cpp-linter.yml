@@ -1,0 +1,43 @@
+name: C/C++ Linter
+
+on:
+  push:
+    branches: [ main, master, litvyakov_branch ]
+
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: file
+          tidy-checks: ""
+          source: .
+          extensions: cpp,h,cc,cxx
+          thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}
+
+
+      - name: Display Linter Results
+        if: always()
+        run: |
+          echo "=== Linter Summary ==="
+          echo "Total checks failed: ${{ steps.linter.outputs.checks-failed }}"
+          echo "Clang-format issues: ${{ steps.linter.outputs.format-checks-failed }}"
+          echo "Clang-tidy issues: ${{ steps.linter.outputs.tidy-checks-failed }}"
+          echo "Files checked: ${{ steps.linter.outputs.checked-files }}"
+          
+
+          echo "=== Detailed Report ==="
+          cat ${{ github.workspace }}/cpp-linter.log || echo "No detailed report available"
+
+      - name: Fail if errors
+        if: steps.linter.outputs.checks-failed > 0
+        run: exit 1
