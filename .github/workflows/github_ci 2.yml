@@ -16,6 +16,6 @@ jobs:
           cmake -B build -G "Unix Makefiles"
           cmake --build build -- -j4
 	- name: time result
-          ./build/bin/main
+run:        ./build/bin/main
 
 
