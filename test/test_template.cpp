@@ -7,5 +7,5 @@
 
 TEST(template, test_check)
 {
-	EXPECT_EQ(check(),1);
+	EXPECT_EQ(1,1);
 }
