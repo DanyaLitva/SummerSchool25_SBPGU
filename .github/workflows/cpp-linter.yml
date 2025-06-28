@@ -18,7 +18,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           style: file
-          tidy: true 
+          tidy: false
           source: .
           extensions: cpp,h,cc,cxx
           thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}

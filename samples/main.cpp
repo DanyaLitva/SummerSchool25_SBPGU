@@ -61,7 +61,6 @@ int main(int argc, char** argv)
         start = std::chrono::steady_clock::now();
     }
 
-        //row_mul_other(lmatrix, rmatrix, resmatrix3, msize);
     MatrixMultiplicationMPI(lmatrix, rmatrix, resmatrix3, msize);
 
         if (myid == 0) {
@@ -72,14 +71,12 @@ int main(int argc, char** argv)
 
             std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix3, msize) << std::endl;
 
-
-
             delete[] lmatrix;
             delete[] rmatrix;
             delete[] resmatrix1;
             delete[] resmatrix2;
             delete[] resmatrix3;
-
+            lmatrix = rmatrix = resmatrix1 = resmatrix2 = resmatrix3 = nullptr;
         }
 
     MPI_Finalize();

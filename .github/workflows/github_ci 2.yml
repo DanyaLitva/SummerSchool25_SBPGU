@@ -1,18 +1,18 @@
-name: time test
+name: test-main
 
 on: [push]
 
 jobs:
-
-  time-test:
+  test-main:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install OpenMPI
         run: sudo apt-get update && sudo apt-get install -y libopenmpi-dev openmpi-bin
-      - name: Configure and Build
+      - name: build
         run: |
           mkdir build
           cmake -B build -G "Unix Makefiles"
           cmake --build build -- -j4
-	.\build\bin\main
+      - name: exec
+        run: ./build/bin/main

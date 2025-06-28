@@ -10,8 +10,8 @@
 #include <stdexcept>
 
 
-int MinVal = -1000;
-int MaxVal = 1000;
+const int MinVal = -1000;
+const int MaxVal = 1000;
 
 
 template <typename type>
@@ -65,9 +65,6 @@ void generatematrix(type* matrix, size_t sz) {
 
 
 
-
-
-
 template <typename type>
 void Flip(type* Matrix, size_t Size) {
     type temp;
@@ -79,8 +76,6 @@ void Flip(type* Matrix, size_t Size) {
         }
     }
 }
-
-
 
 
 //the algorithm from the unn website http://www.hpcc.unn.ru/?dir=910
@@ -124,13 +119,13 @@ void MatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
     MPI_Scatter(A, part, mpi_type, bufA, part, mpi_type, 0, MPI_COMM_WORLD);
     MPI_Scatter(B, part, mpi_type, bufB, part, mpi_type, 0, MPI_COMM_WORLD);
 
-    temp = 0.0;
+    temp = type(0);
     for (i = 0; i < ProcPartSize; i++) {
         for (j = 0; j < ProcPartSize; j++) {
             for (k = 0; k < dim; k++)
                 temp += bufA[i * dim + k] * bufB[j * dim + k];
             bufC[i * dim + j + ProcPartSize * ProcRank] = temp;
-            temp = 0.0;
+            temp = type(0);
         }
     }
 
@@ -143,7 +138,7 @@ void MatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
         if (ProcRank == 0)
             PrevProc = ProcNum - 1;
         MPI_Sendrecv_replace(bufB, part, mpi_type, NextProc, 0, PrevProc, 0, MPI_COMM_WORLD, &Status);
-        temp = 0.0;
+        temp = type(0);
         for (i = 0; i < ProcPartSize; i++) {
             for (j = 0; j < ProcPartSize; j++) {
                 for (k = 0; k < dim; k++) {
@@ -153,7 +148,7 @@ void MatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
                     ind = ProcRank - p;
                 else ind = (ProcNum - p + ProcRank);
                 bufC[i * dim + j + ind * ProcPartSize] = temp;
-                temp = 0.0;
+                temp = type(0);
             }
         }
     }
@@ -167,112 +162,3 @@ void MatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
 
 
 
-
-
-//a solution from the internet for checking mpi
-template <typename type>
-void row_mul_other(type* left, type* right, type* result, size_t sz) {
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-
-    MPI_Datatype mpi_type;
-    if (typeid(type) == typeid(double)) mpi_type = MPI_DOUBLE;
-    else if (typeid(type) == typeid(float)) mpi_type = MPI_FLOAT;
-    else if (typeid(type) == typeid(int)) mpi_type = MPI_INT;
-    else throw std::runtime_error("Unsupported matrix type");
-
-
-    int* counts = nullptr;
-    int* displs = nullptr;
-    int* counts_elems = nullptr;
-    int* displs_elems = nullptr;
-
-    int local_rows;
-    int total_rows = static_cast<int>(sz);
-
-
-    if (rank == 0) {
-        counts = new int[size];
-        displs = new int[size];
-        counts_elems = new int[size];
-        displs_elems = new int[size];
-
-        int offset = 0;
-        for (int i = 0; i < size; ++i) {
-            counts[i] = total_rows / size;
-            if (i < total_rows % size) counts[i]++;
-
-            displs[i] = offset;
-            offset += counts[i];
-
-            counts_elems[i] = counts[i] * sz;
-            displs_elems[i] = displs[i] * sz;
-        }
-        local_rows = counts[0];
-    }
-
-
-    MPI_Scatter(counts, 1, MPI_INT, &local_rows, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-
-    type* local_A = new type[local_rows * sz]();
-    type* local_C = new type[local_rows * sz]();
-    type* B = new type[sz * sz];
-
-
-    if (rank == 0) {
-        std::copy(right, right + sz * sz, B);
-    }
-    MPI_Bcast(B, sz * sz, mpi_type, 0, MPI_COMM_WORLD);
-
-
-    MPI_Scatterv(
-        left,
-        counts_elems,
-        displs_elems,
-        mpi_type,
-        local_A,
-        local_rows * sz,
-        mpi_type,
-        0,
-        MPI_COMM_WORLD
-    );
-
-
-    for (int i = 0; i < local_rows; ++i) {
-        for (int j = 0; j < sz; ++j) {
-            type sum = 0;
-            for (int k = 0; k < sz; ++k) {
-                sum += local_A[i * sz + k] * B[k * sz + j];
-            }
-            local_C[i * sz + j] = sum;
-        }
-    }
-
-
-    MPI_Gatherv(
-        local_C,
-        local_rows * sz,
-        mpi_type,
-        result,
-        counts_elems,
-        displs_elems,
-        mpi_type,
-        0,
-        MPI_COMM_WORLD
-    );
-
-
-    delete[] local_A;
-    delete[] local_C;
-    delete[] B;
-
-    if (rank == 0) {
-        delete[] counts;
-        delete[] displs;
-        delete[] counts_elems;
-        delete[] displs_elems;
-    }
-}
