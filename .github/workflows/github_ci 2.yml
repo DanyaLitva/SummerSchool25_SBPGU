@@ -15,4 +15,6 @@ jobs:
           mkdir build
           cmake -B build -G "Unix Makefiles"
           cmake --build build -- -j4
-
+	- name: CMake tests
+      run: |
+	.\build\bin\main
