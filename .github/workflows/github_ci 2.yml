@@ -16,6 +16,7 @@ jobs:
           cmake -B build -G "Unix Makefiles"
           cmake --build build -- -j4
 	- name: time result
-run:        ./build/bin/main
+- name: Install OpenMPI
+        run: ./build/bin/main
 
 
