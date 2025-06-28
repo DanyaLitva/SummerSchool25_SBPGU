@@ -4,7 +4,6 @@
 
 #include "template.h"
 #include <iostream>
-#include "mpi.h"
 #include <chrono>
 #define type int
 
@@ -27,37 +26,63 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     MPI_Get_processor_name(processor_name, &namelen);
 
-    type* lmatrix = new type[msize * msize];
-    type* rmatrix = new type[msize * msize];
-    type* resmatrix1 = new type[msize * msize];
-    type* resmatrix2 = new type[msize * msize];
-	
-    generatematrix(lmatrix, msize);
-    generatematrix(rmatrix, msize);
+    type* lmatrix = nullptr;
+    type* rmatrix = nullptr;
+    type* resmatrix1 = nullptr;
+    type* resmatrix2 = nullptr;
+    type* resmatrix3 = nullptr;
 
-    start = std::chrono::steady_clock::now();
-    basedmul(lmatrix, rmatrix, resmatrix1, msize);
-    end = std::chrono::steady_clock::now();
-    elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
-    std::cout << "standart mul time: " << elapsed / 1000. << " seconds" << std::endl;
+    if (myid == 0) {
 
-    start = std::chrono::steady_clock::now();
-    mul(lmatrix, rmatrix, resmatrix2, msize);
-    end = std::chrono::steady_clock::now();
-    elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
-    std::cout << "cache friendly mul time: " << elapsed / 1000. << " seconds" << std::endl;
+        lmatrix = new type[msize * msize];
+        rmatrix = new type[msize * msize];
+        resmatrix1 = new type[msize * msize];
+        resmatrix2 = new type[msize * msize];
+        resmatrix3 = new type[msize * msize];
+
+        generatematrix(lmatrix, msize);
+        generatematrix(rmatrix, msize);
+
+        start = std::chrono::steady_clock::now();
+        basedmul(lmatrix, rmatrix, resmatrix1, msize);
+        end = std::chrono::steady_clock::now();
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
+        std::cout << "standart mul time: " << elapsed / 1000. << " seconds" << std::endl;
+
+        start = std::chrono::steady_clock::now();
+        mul(lmatrix, rmatrix, resmatrix2, msize);
+        end = std::chrono::steady_clock::now();
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
+        std::cout << "cache friendly mul time: " << elapsed / 1000. << " seconds" << std::endl;
 
 
-    std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix2, msize)<<std::endl;
+        std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix2, msize) << std::endl;
+
+        start = std::chrono::steady_clock::now();
+    }
+
+        //row_mul_other(lmatrix, rmatrix, resmatrix3, msize);
+    MatrixMultiplicationMPI(lmatrix, rmatrix, resmatrix3, msize);
+
+        if (myid == 0) {
+            end = std::chrono::steady_clock::now();
+            elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
+            std::cout << "mpi time: " << elapsed / 1000. << " seconds" << std::endl;
+
+
+            std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix3, msize) << std::endl;
 
 
 
+            delete[] lmatrix;
+            delete[] rmatrix;
+            delete[] resmatrix1;
+            delete[] resmatrix2;
+            delete[] resmatrix3;
 
+        }
 
-    delete [] lmatrix;
-    delete [] rmatrix;
-    delete [] resmatrix1;
-    delete [] resmatrix2;
-	MPI_Finalize();
+    MPI_Finalize();
+
 	return 0;
 }
