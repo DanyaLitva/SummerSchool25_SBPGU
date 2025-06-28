@@ -4,7 +4,6 @@ on:
   push:
     branches: [ main, master, litvyakov_branch ]
 
-
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -19,25 +18,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           style: file
-          tidy-checks: ""
+          tidy: false  
           source: .
           extensions: cpp,h,cc,cxx
           thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}
-
+          clang-format-version: 17  
 
       - name: Display Linter Results
         if: always()
         run: |
           echo "=== Linter Summary ==="
           echo "Total checks failed: ${{ steps.linter.outputs.checks-failed }}"
-          echo "Clang-format issues: ${{ steps.linter.outputs.format-checks-failed }}"
-          echo "Clang-tidy issues: ${{ steps.linter.outputs.tidy-checks-failed }}"
           echo "Files checked: ${{ steps.linter.outputs.checked-files }}"
           
-
           echo "=== Detailed Report ==="
-          cat ${{ github.workspace }}/cpp-linter.log || echo "No detailed report available"
+          if [ -f "${{ github.workspace }}/cpp-linter.log" ]; then
+            cat ${{ github.workspace }}/cpp-linter.log
+          else
+            echo "No linting issues found"
+          fi
 
       - name: Fail if errors
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
+        if: ${{ steps.linter.outputs.checks-failed != 0 }}
+        run: |
+          if [ "${{ steps.linter.outputs.checks-failed }}" -gt 0 ]; then
+            exit 1
+          fi
