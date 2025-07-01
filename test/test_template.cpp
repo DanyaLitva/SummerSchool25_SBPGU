@@ -5,6 +5,7 @@
 #include "template.h"
 #include <gtest.h>
 
+const size_t MSIZE = 1024;
 
 template <typename type>
 class TestTMatrix : public ::testing::Test
@@ -31,7 +32,7 @@ protected:
     type* rmatrix = nullptr;
     type* resmatrix1 = nullptr;
     type* resmatrix2 = nullptr;
-    size_t msize = 1024;
+    size_t msize = MSIZE;
     using param = type;
 };
 TYPED_TEST_CASE_P(TestTMatrix);
