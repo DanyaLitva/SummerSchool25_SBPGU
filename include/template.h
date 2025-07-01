@@ -53,6 +53,14 @@ bool checkmatrix(type* left, type* right, size_t sz) {
 }
 
 template <typename type>
+type checkerrormatrix(type* left, type* right, size_t sz) {
+    type temp = type(0);
+    for (size_t i = 0; i < (sz * sz); ++i)
+        if (std::abs(left[i] - right[i]) > temp)  temp = std::abs(left[i] - right[i]);
+    return temp;
+}
+
+template <typename type>
 void generatematrix(type* matrix, size_t sz) {
     std::random_device r;
     std::default_random_engine e(r());
@@ -64,6 +72,83 @@ void generatematrix(type* matrix, size_t sz) {
 }
 
 
+
+
+
+template <typename type>
+void decMatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
+
+    int ProcRank, ProcNum;
+    MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &ProcNum);
+
+    MPI_Datatype mpi_type;
+    if (typeid(type) == typeid(double)) mpi_type = MPI_DOUBLE;
+    else if (typeid(type) == typeid(float)) mpi_type = MPI_FLOAT;
+    else if (typeid(type) == typeid(int)) mpi_type = MPI_INT;
+    else throw std::runtime_error("Unsupported matrix type");
+
+    int dim = Size;
+    int rows_per_proc = dim / ProcNum;
+    int remainder = dim % ProcNum;
+    int my_rows = rows_per_proc;
+    if (ProcRank < remainder) {
+        my_rows++;
+    }
+
+    int* counts = nullptr;
+    int* displs = nullptr;
+
+    if (ProcRank == 0) {
+        counts = new int[ProcNum];
+        displs = new int[ProcNum];
+        int offset = 0;
+        for (int i = 0; i < ProcNum; i++) {
+            int rows_i = rows_per_proc;
+            if (i < remainder) {
+                rows_i++;
+            }
+            counts[i] = rows_i * dim;
+            displs[i] = offset;
+            offset += counts[i];
+        }
+    }
+
+    type* localA = new type[my_rows * dim];
+    MPI_Scatterv(A, counts, displs, mpi_type, localA, my_rows * dim, mpi_type, 0, MPI_COMM_WORLD);
+
+    type* localB = nullptr;
+    if (ProcRank == 0) {
+        localB = B;
+    }
+    else {
+        localB = new type[dim * dim];
+    }
+    MPI_Bcast(localB, dim * dim, mpi_type, 0, MPI_COMM_WORLD);
+
+    type* localC = new type[my_rows * dim];
+    for (int i = 0; i < my_rows; i++) {
+        for (int j = 0; j < dim; j++) {
+            type temp = 0;
+            for (int k = 0; k < dim; k++) {
+                temp += localA[i * dim + k] * localB[k * dim + j];
+            }
+            localC[i * dim + j] = temp;
+        }
+    }
+
+    MPI_Gatherv(localC, my_rows * dim, mpi_type, C, counts, displs, mpi_type, 0, MPI_COMM_WORLD);
+
+    delete[] localA;
+    delete[] localC;
+    if (ProcRank != 0) {
+        delete[] localB;
+    }
+    if (ProcRank == 0) {
+        delete[] counts;
+        delete[] displs;
+    }
+}
 
 template <typename type>
 void Flip(type* Matrix, size_t Size) {
@@ -78,9 +163,8 @@ void Flip(type* Matrix, size_t Size) {
 }
 
 
-//the algorithm from the unn website http://www.hpcc.unn.ru/?dir=910
 template <typename type>
-void MatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
+void stripMatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
 
     int ProcRank, ProcNum;
     MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
@@ -155,10 +239,16 @@ void MatrixMultiplicationMPI(type*& A, type*& B, type*& C, size_t& Size) {
 
     MPI_Gather(bufC, ProcPartElem, mpi_type, C, ProcPartElem, mpi_type, 0, MPI_COMM_WORLD);
 
+    if (ProcRank == 0) {
+        Flip(B, Size);
+    }
+
     delete[]bufA;
     delete[]bufB;
     delete[]bufC;
 }
+
+
 
 
 

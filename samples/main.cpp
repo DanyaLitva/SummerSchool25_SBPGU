@@ -5,7 +5,7 @@
 #include "template.h"
 #include <iostream>
 #include <chrono>
-#define type int
+#define type double
 
 size_t msize = 1024;
 
@@ -31,14 +31,17 @@ int main(int argc, char** argv)
     type* resmatrix1 = nullptr;
     type* resmatrix2 = nullptr;
     type* resmatrix3 = nullptr;
+    type* resmatrix4 = nullptr;
 
     if (myid == 0) {
-
+        std::cout << "Matrix size: " << msize << std::endl;
+        std::cout << "number of processes: " << numprocs << std::endl;
         lmatrix = new type[msize * msize];
         rmatrix = new type[msize * msize];
         resmatrix1 = new type[msize * msize];
         resmatrix2 = new type[msize * msize];
         resmatrix3 = new type[msize * msize];
+        resmatrix4 = new type[msize * msize];
 
         generatematrix(lmatrix, msize);
         generatematrix(rmatrix, msize);
@@ -56,21 +59,34 @@ int main(int argc, char** argv)
         std::cout << "cache friendly mul time: " << elapsed / 1000. << " seconds" << std::endl;
 
 
-        std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix2, msize) << std::endl;
+        //std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix2, msize) << std::endl;
+        std::cout << "Error is: " << checkerrormatrix(resmatrix1, resmatrix2, msize) << std::endl;
 
         start = std::chrono::steady_clock::now();
     }
 
-    MatrixMultiplicationMPI(lmatrix, rmatrix, resmatrix3, msize);
+    decMatrixMultiplicationMPI(lmatrix, rmatrix, resmatrix3, msize);
 
-        if (myid == 0) {
-            end = std::chrono::steady_clock::now();
-            elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
-            std::cout << "mpi time: " << elapsed / 1000. << " seconds" << std::endl;
+    if (myid == 0) {
+        end = std::chrono::steady_clock::now();
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
+        std::cout << "decomposition mpi algorithm time: " << elapsed / 1000. << " seconds" << std::endl;
+        //std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix3, msize) << std::endl;
+        std::cout << "Error is: " << checkerrormatrix(resmatrix1, resmatrix3, msize) << std::endl;
 
 
-            std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix3, msize) << std::endl;
+    }
 
+    stripMatrixMultiplicationMPI(lmatrix, rmatrix, resmatrix4, msize);
+
+    if (myid == 0) {
+        end = std::chrono::steady_clock::now();
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds> (end - start).count();
+        std::cout << "striped mpi algorithm time: " << elapsed / 1000. << " seconds" << std::endl;
+        //std::cout << "Result is correct? " << checkmatrix(resmatrix1, resmatrix4, msize) << std::endl;
+        std::cout << "Error is: " << checkerrormatrix(resmatrix1, resmatrix4, msize) << std::endl;
+
+     
             delete[] lmatrix;
             delete[] rmatrix;
             delete[] resmatrix1;
