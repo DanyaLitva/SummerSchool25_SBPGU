@@ -44,8 +44,8 @@ TYPED_TEST_P(TestTMatrix, cache_friendly)
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     if (myid == 0) {
-        mul(lmatrix, rmatrix, resmatrix2, msize);
-        EXPECT_TRUE(checkerrormatrix(resmatrix1, resmatrix2, msize) < 1.e-6);
+        mul(this->lmatrix, this->rmatrix, this->resmatrix2, this->msize);
+        EXPECT_TRUE(checkerrormatrix(this->resmatrix1, this->resmatrix2, this->msize) < 1.e-6);
     }
 }
 
