@@ -4,5 +4,3 @@
 
 
 #include "template.h"
-
-int check() { return 1; }
